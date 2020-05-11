@@ -25,78 +25,123 @@ module.exports.get_docs_share = async (req, res) => {
     })
 
 }
+const get_docs_share = async (tableName, Id, rela, tableName2) => {
+    let ss = driverNeo4j.session();
+    let rs = await ss.run(`MATCH (n1:${tableName} {Id:${Id}})-[:${rela}]-(o:${tableName2})RETURN n1, o`);
+    return rs;
+}
+const getNode = async (tableName, Id) => {
+    let ss = driverNeo4j.session();
+    console.log(Id);
+    let rs = await ss.run(`MATCH (a:${tableName} {Id:${Id}})return a`);
+    return rs;
+}
+const createNode = async (tableName, data) => {
+    let ss = driverNeo4j.session();
+    let rs = await ss.run(`CREATE (:${tableName} {Id:${data.Id},FullName:"${data.FullName}"})`)
+    return rs;
+}
 module.exports.share_document = async (req, res) => {
     let result = [];
-    // const document = await selectData('documents', {
-    //     filteringConditions: [
-    //         ['Id', '=', req.body.id]
-    //     ]
-    // })
-    // if (document.length === 0) return res.status(401).json({
-    //     status_code: 401,
-    //     message: "Document id is not exits!"
-    // })
-    console.log(req.body.userShare);
-    // let temp = req.body.userShare.split(',')
-    // let arrQueRyUser = req.body.userShare.map(item => )
-    // const user = await selectData('user', {
-    //     filteringConditions: [
-    //         ['Id', '=', req.params.id]
-    //     ]
-    // })
-    // Input data ID_Document,[]: User shared
-    // const list = await selectData('user', {
-    //     filteringConditions: [
-    //         ['Email', '=', 'nghia@gmail.com']
-    //     ]
-    // })
+    console.log(req.body);
+    const document = await selectData('documents', {
+        filteringConditions: [
+            ['Id', '=', req.body.id]
+        ]
+    })
+    if (document.length === 0) return res.status(401).json({
+        status_code: 401,
+        message: "Document id is not exits!"
+    })
     const Knex = knex();
 
-    // console.log("Data >>", list);
-    // Knex('user')
-    //     .select("*")
-    //     .where('user.Id', req.body.userShare)
-    //     .then(data =>
-    //         // JSON.parse(JSON.stringify(data))
-    //         console.log(data)
-    //     )
     let userShare = await Knex.select('Id', 'FullName').from('user')
         .whereIn('Email', [...req.body.userShare])
     let idUser = userShare.map(item => item.Id)
-    console.log(userShare);
-    console.log(userShare[0].Id);
-    console.log("ID >>", idUser);
+    let documentNode = await getNode('document_share', req.body.id);
+    let rsUser = await session.run(`MATCH (d:user) WHERE d.Id IN [${[...idUser]}]  RETURN d `);
+    console.log("rsUser>>>>", rsUser);
+    let userExits = rsUser.records.map(item => ({ Id: item._fields[0].properties.Id.low, FullName: item._fields[0].properties.FullName }))
+    let userNotExits = userShare.filter(item => userExits.findIndex(a => a.Id === item.Id) === - 1 ? item : "");
+    console.log("user Exit >>", userExits);
+    let docShare = await get_docs_share('document_share', req.body.id, 'share', 'user');
+    console.log("doc share>>>>", docShare);
 
-    session.run(`MATCH (d:user) WHERE d.id IN [${[...idUser]}]  RETURN d `).then(result => {
-        let userExits = result.records.map(item => ({ id: item._fields[0].properties.id.low, fullName: item._fields[0].properties.fullName }))
-        let userNotExits = userShare.filter(item => userExits.find(i => i.id !== item.Id));
-        // session.run(`FOREACH (props IN [...userNotExits]| 
-        //     CREATE ({ a:props.a,b:props.b }))`).then(result => {})
-        // Tạo các node chưa tồn tại 
-        // Tạo relationship của document với các node user
+    let rsRelationShipOfNode = docShare.records.map(item => item._fields[1].properties.Id.low);
+    console.log("rs >>>", rsRelationShipOfNode);
+    let temp = idUser.filter(item => rsRelationShipOfNode.findIndex(i => i === item) === -1 ? item : "");
+    // Check nếu temp không rỗng call tạo relationship của nó
+    /* Check đây nè ở dưới mở ra khi xong thoi
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    */
+    console.log("temp >>", temp);
+    console.log("userID>> ", idUser);
+    // console.log("loook >>>",docShare.records[0].keys);
 
-    })
-    // session.run(`MATCH (d:document_share {id:${req.body.id} }) RETURN d `).then(async result => {
-    //     // console.log(result)
-    //     // console.log(result.records);
-    //     if (result.records.length === 0) {
-    //         session.run(`CREATE (d:document_share{id: ${req.body.id},title:${document[0].Title}}) RETURN d  `).then(data => {
-    //             console.log("length:>>", data.records[0].length);
-    //             console.log("data >>", data.records[0]);
-    //             if (data.records[0].length !== 1)
-    //                 return res.status('405').json({
-    //                     status_code: 405,
-    //                     message: "System error!"
-    //                 })
+    // if (userExits.length === 0) {
+    //     userShare.map(async item => {
+    //         let rs = await createNode('user', { Id: item.Id, FullName: item.FullName })
+    //     })
+    // }
+    // else {
+    //     if (userNotExits.length !== 0) {
+    //         userNotExits.map(async item => {
+    //             let rs = await createNode('user', { Id: item.Id, FullName: item.FullName })
+    //             console.log("dsada", rs);
     //         })
     //     }
+    //     //         // 
+    //     //         // 
+    //     //         // MATCH (a:document_share {id: 1}), (b:user) // tao multi relationship
+    //     //         // WHERE b.Id IN [4,10]
+    //     //         // MERGE (a)-[r:share]->(b)
+    //     //         // 
     // }
-    // )
+    // let ss = driverNeo4j.session();
+    // if (documentNode.records.length === 0) {
+    //     let rs = await session.run(`CREATE (a:document_share {Id:${document[0].Id},Fullname:${document[0].Title}})return a`);
+    //     if (rs.records.length === 0) return res.status(401).json({
+    //         status_code: 401,
+    //         message: "Share document is faild!"
+    //     })
+
+    //     let ses = driverNeo4j.session();
+
+    //     setTimeout(() => {
+    //         ses.run(`MATCH (a:document_share {Id: ${document[0].Id}}), (b:user) WHERE b.Id IN [${[...idUser]}] MERGE (a)-[r:share]->(b) return a,b`).then(result => {
+    //             console.log(">>>>>", result);
+    //         })
+    //     }, 2000)
+    // }
+    // else {
+    //     console.log("đã tồn tại");
+    //     console.log();
+    //     console.log("user exit", userNotExits);
+    //     setTimeout(() => {
+    //         session.run(`MATCH (a:document_share {Id: ${document[0].Id}}), (b:user) WHERE b.Id IN [${[...userNotExits.map(item => item.Id)]}] MERGE (a)-[r:share]->(b) return a,b`).then(result => {
+    //             console.log(">>>>>", result);
+    //         })
+    //     }, 2000)
+
+    // }
+    /* Nếu doument === 0 tài liệu chưa share
+     * Nếu # 0 đã share chỉ thêm user được share
+     *
+     */
 
 
-    // Get được list user được chia sẻ
-    // Kiểm tra coi có document đó chưa nếu chưa có thì tạo node mới
-    // Nếu có rồi thì tạo re
 
 
 
@@ -117,16 +162,11 @@ module.exports.share_document = async (req, res) => {
 
 
 
-    // if (list.length === 0) return res.status(401).json({
-    //     status_code: 401,
-    //     message: "ID is not exits!"
-    // })
-    // Lấy tất cả các tài liệu được chia sẽ cho user theo ID
-    // Truy xuất đến user coi có hk
-    // 
-    // const data = session.run('MATCH(n:user) return n').then(result => {
-    //     result.records.forEach(item => console.log(item._fields[0].properties))
-    // })
-    // const dataAld = session.run("MATCH (Ind:user {id: 1})<-[: share]-(n) RETURN n ").then(data => console.log(data.records))
+
+
+
+
+    // console.log(document);
+
     res.send("Share document");
 }
