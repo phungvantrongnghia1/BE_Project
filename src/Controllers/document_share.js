@@ -3,7 +3,7 @@ const { get_docs_share, getNode, createNode, deleteNode, deleteAllRelationShipNo
 const driverNeo4j = require('../../public/database/neo4j');
 let session = driverNeo4j.session();
 module.exports.get_docs_share = async (req, res) => {
-    let result = [];
+    let docs_share = [];
     const user = await selectData('user', {
         filteringConditions: [
             ['Id', '=', req.params.id]
@@ -13,9 +13,18 @@ module.exports.get_docs_share = async (req, res) => {
         status_code: 401,
         message: "ID is not exits!"
     })
-    session.run(`MATCH (Ind:user {Id: ${req.params.id}})<-[: share]-(n) RETURN n `).then(data => {
-        data.records.forEach(e => result.push(e._fields[0].properties)
-        )
+    session.run(`MATCH (Ind:user {Id: ${req.params.id}})<-[r: share]-(n) RETURN n,r `).then(async data => {
+        // Có được tất cả docs share là 1 array từ array get relationship của từng docs if(property của relationship docs === undifine đồng nghĩa nó được share trực tiếp)
+        //  Ngược lại nó được share gián tiếp (có ID của user share)
+        data.records.forEach(e => docs_share.push({ Id_docs: e._fields[0].properties.Id.low, Id_user_share: e._fields[1].properties.id_share.low }))
+        const Knex = knex();
+        let docsShareMySql = await Knex.select('*').from('documents') // Get user from email
+            .whereIn('Id', [...docs_share.map(item => item.Id_docs)]);
+        let usersShare = await Knex.select('Id', 'FullName', 'Email', 'PhoneNumber').from('user') // Get user from email
+            .whereIn('Id', [...docs_share.map(item => item.Id_user_share)]);
+        let result = docsShareMySql.map((item, index) => {
+            return { ...item, user_share: { ...usersShare[index] } }
+        })
         res.status(200).json({
             status_code: 200,
             message: "Get document share success",
@@ -142,7 +151,7 @@ module.exports.derection_share = async (req, res) => {
         }
     }
     let userNode = [...idUser, ...temp];
-    let ses = driverNeo4j.session();    
+    let ses = driverNeo4j.session();
     setTimeout(() => {
         ses.run(`MATCH (a:document_share {Id: ${document[0].Id}}), (b:user {Id:${req.body.id_user}})  MERGE (b)-[r:derect_share]->(a) return a,b`).then(result => {
             ses.run(`MATCH (a:document_share {Id: ${document[0].Id}}), (b:user) WHERE b.Id IN [${[...userNode]}] MERGE (a)-[r:share {id_share:${req.body.id_user}}]->(b) return a,b`).then(result => {
