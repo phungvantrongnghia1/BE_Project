@@ -15,6 +15,9 @@ const upload = multer({ storage: storage })
 module.exports.upload = (upload.single('file')), (req, res, next) => {
     next();
 }
+module.exports.uploadMulti = (upload.array('file', 12)), (req, res, next) => {
+    next();
+}
 module.exports.removeFile = (path) => {
     fs.unlink(path, (err) => {
         if (err) {

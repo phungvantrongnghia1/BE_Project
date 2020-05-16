@@ -53,7 +53,10 @@ module.exports.create = async (req, res) => {
     })
     let documentNew = { ...req.body };
     documentNew.File = JSON.stringify({
-        url: req.file.path
+        url: req.files[0].path
+    })
+    documentNew.Image = JSON.stringify({
+        url: req.files[1].path
     })
     const newDocument = await insertData('documents', [
         { ...documentNew }

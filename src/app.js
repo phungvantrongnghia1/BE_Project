@@ -1,17 +1,20 @@
 const express = require('express');
 const mysqlDB = require("../public/database/mysql_db");
 const bodyParser = require('body-parser')
+var cors = require('cors')
+
 const authRoute = require("./Routes/auth");
 const documentRouteCategory = require('./Routes/document_category');
 const documentRoute = require('./Routes/document');
 const documentShateRoute = require("./Routes/document_share");
 const app = express();
 
-// const driverNeo4j = require('../public/database/neo4j');
-// let session = driverNeo4j.session();
+const driverNeo4j = require('../public/database/neo4j');
+let session = driverNeo4j.session();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static('public'));
+app.use(cors())
 
 
 
@@ -38,6 +41,6 @@ app.get('/', (req, res) => {
     //   });
 })
 
-app.listen(3100, (req, res) => {
+app.listen(3200, (req, res) => {
     console.log("Server is running at port 3100");
 })
