@@ -68,15 +68,13 @@ module.exports.create = async (req, res) => {
     })
 }
 module.exports.update = async (req, res) => {
+    // Check ID insite login auth token
     let dataUpdate = { ...req.body };
-    if (req.body.UserId) return res.status(401).json({
-        status_code: 401,
-        message: "Incorrect data format!"
-    })
     delete dataUpdate.Id;
     const document = await selectData('documents', {
         filteringConditions: [
             ['Id', '=', req.body.Id]
+            // , Thêm Id của userID
         ]
     })
     if (document.length === 0) return res.status(401).json({
@@ -95,12 +93,22 @@ module.exports.update = async (req, res) => {
             message: "CategoryDocumentId is not exits!"
         })
     }
-    if (req.file) {
-        dataUpdate.File = JSON.stringify({
-            url: req.file.path
-        })
-        let path = JSON.parse(document[0].File);
-        removeFile(path.url)
+    if (req.files) {
+
+        if (req.files[0]) {
+            dataUpdate.File = JSON.stringify({
+                url: `file/${req.files[0].filename}`
+            })
+            let path = "public/" + JSON.parse(document[0].File).url;
+            removeFile(path)
+        }
+        if (req.files[1]) {
+            dataUpdate.Image = JSON.stringify({
+                url: `file/${req.files[1].filename}`
+            })
+            let path = "public/" + JSON.parse(document[0].Image).url;
+            removeFile(path)
+        }
     }
     updateData('documents', {
         fields: dataUpdate,
@@ -131,7 +139,6 @@ module.exports.update = async (req, res) => {
         })
 }
 module.exports.delete_document = async (req, res) => {
-    console.log(req.params);
     const documentDelete = await selectData('documents', {
         filteringConditions: [
             ['Id', '=', req.params.id]
