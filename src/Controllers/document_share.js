@@ -129,7 +129,7 @@ module.exports.share_document = async (req, res) => {
   let ss = driverNeo4j.session();
   if (documentNode.records.length === 0) {
     let rs = await session.run(
-      `CREATE (a:document_share {Id:${document[0].Id},Fullname:${document[0].Title}})return a`
+      `CREATE (a:document_share {Id:${document[0].Id},Fullname:"${document[0].Title}"})return a`
     );
     if (rs.records.length === 0)
       return res.status(401).json({
@@ -347,11 +347,6 @@ module.exports.re_share = async (req, res) => {
       req.body.id_user // change width ID user login
     );
   }
-  console.log("idUserShare >>", idUserShare);
-  console.log("userExits", userExits);
-  console.log("userNotExits", userNotExits);
-  console.log("UserExitOnnode >>", UserExitOnnode);
-  console.log("UserNotExitOnnode >>", UserNotExitOnnode);
   return res.status(200).json({
     status_code: 200,
     message: "Share docs success",
@@ -411,5 +406,29 @@ module.exports.delete_docs_share = async (req, res) => {
     status_code: 200,
     message: "Delete document is success",
     data: { Id: req.body.Id },
+  });
+};
+module.exports.search_document_share = async (req, res) => {
+  // Input chart of name document_share
+  let docshare = await get_docs_share(
+    "user",
+    req.body.Id,
+    "share",
+    "document_share"
+  );
+  let idDocshare = docshare.records.map(
+    (record) => record._fields[1].properties.Id.low
+  );
+  const Knex = knex();
+  let docsShareMySql = await Knex.select("*")
+    .from("	documents") // Get user from email
+    .whereIn("Id", [...idDocshare]);
+  let result = docsShareMySql.filter((doc) =>
+    doc.Title.toLowerCase().search(req.query.qr.toLowerCase()) < 0 ? null : doc
+  );
+  return res.status(200).json({
+    status_code: 200,
+    message: "Success",
+    data: result,
   });
 };
