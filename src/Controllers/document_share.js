@@ -18,7 +18,7 @@ let session = driverNeo4j.session();
 module.exports.get_docs_share = async (req, res) => {
   let docs_share = [];
   const user = await selectData("user", {
-    filteringConditions: [["Id", "=", req.params.id]],
+    filteringConditions: [["Id", "=", req.user.id]],
   });
   if (user.length === 0)
     return res.status(401).json({
@@ -26,7 +26,7 @@ module.exports.get_docs_share = async (req, res) => {
       message: "ID is not exits!",
     });
   session
-    .run(`MATCH (Ind:user {Id: ${req.params.id}})<-[r: share]-(n) RETURN n,r `)
+    .run(`MATCH (Ind:user {Id: ${req.user.id}})<-[r: share]-(n) RETURN n,r `)
     .then(async (data) => {
       // Có được tất cả docs share là 1 array từ array get relationship của từng docs if(property của relationship docs === undifine đồng nghĩa nó được share trực tiếp)
       //  Ngược lại nó được share gián tiếp (có ID của user share)

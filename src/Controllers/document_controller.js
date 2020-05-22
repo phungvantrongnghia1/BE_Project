@@ -2,13 +2,11 @@ const { selectData, deleteData, updateData, insertData } = require("../../public
 const { removeFile, upload } = require("../utils/file");
 
 module.exports.getList = async (req, res) => {
+    console.log("user >>>",req.user);
     const list = await selectData('documents', {
         filteringConditions: [
-        ]
-    })
-    if (list.length === 0) return res.status(401).json({
-        status_code: 401,
-        message: "ID is not exits!"
+            ['UserId', '=', req.user.id]
+        ] 
     })
     return res.status(200).json({
         status_code: 200,
