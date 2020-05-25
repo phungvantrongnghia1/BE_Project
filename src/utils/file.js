@@ -15,7 +15,7 @@ const upload = multer({ storage: storage })
 module.exports.upload = (upload.single('file')), (req, res, next) => {
     next();
 }
-module.exports.uploadMulti = (upload.array('file', 12)), (req, res, next) => {
+module.exports.uploadMulti = (upload.fields([{ name: 'file', maxCount:  8}, { name: 'image', maxCount: 8 }])), (req, res, next) => {
     next();
 }
 module.exports.removeFile = (path) => {

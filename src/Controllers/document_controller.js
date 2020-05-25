@@ -2,11 +2,10 @@ const { selectData, deleteData, updateData, insertData } = require("../../public
 const { removeFile, upload } = require("../utils/file");
 
 module.exports.getList = async (req, res) => {
-    console.log("user >>>",req.user);
     const list = await selectData('documents', {
         filteringConditions: [
             ['UserId', '=', req.user.id]
-        ] 
+        ]
     })
     return res.status(200).json({
         status_code: 200,
@@ -31,19 +30,10 @@ module.exports.getListByID = async (req, res) => {
     })
 }
 module.exports.create = async (req, res) => {
-    const user = await selectData('user', {
-        filteringConditions: [
-            ['Id', '=', req.body.UserId]
-        ]
-    })
     const category = await selectData('category_documents', {
         filteringConditions: [
             ['Id', '=', req.body.CategoryDocumentId]
         ]
-    })
-    if (user.length === 0) return res.status(401).json({
-        status_code: 401,
-        message: "UserId is not exits!"
     })
     if (category.length === 0) return res.status(401).json({
         status_code: 401,
@@ -51,11 +41,14 @@ module.exports.create = async (req, res) => {
     })
     let documentNew = { ...req.body };
     documentNew.File = JSON.stringify({
-        url: `/file/${req.files[0].filename}`
+        url: `/file/${req.files.file[0].filename}`,
+        fileName: req.files.file[0].filename
     })
     documentNew.Image = JSON.stringify({
-        url: `/file/${req.files[1].filename}`
+        url: `/file/${req.files.image[0].filename}`,
+        fileName: req.files.image[0].filename
     })
+    documentNew.UserId = req.user.id;
     const newDocument = await insertData('documents', [
         { ...documentNew }
     ])
@@ -71,8 +64,8 @@ module.exports.update = async (req, res) => {
     delete dataUpdate.Id;
     const document = await selectData('documents', {
         filteringConditions: [
-            ['Id', '=', req.body.Id]
-            // , Thêm Id của userID
+            ['Id', '=', req.body.Id],
+            ['UserId', '=', req.user.id]
         ]
     })
     if (document.length === 0) return res.status(401).json({
@@ -91,18 +84,20 @@ module.exports.update = async (req, res) => {
             message: "CategoryDocumentId is not exits!"
         })
     }
-    if (req.files) {
-
-        if (req.files[0]) {
+    if (Object.entries(req.files).length !== 0) {
+        if (req.files.file) {
             dataUpdate.File = JSON.stringify({
-                url: `file/${req.files[0].filename}`
+                url: `/file/${req.files.file[0].filename}`,
+                fileName: req.files.file[0].filename
             })
             let path = "public/" + JSON.parse(document[0].File).url;
             removeFile(path)
         }
-        if (req.files[1]) {
+        if (req.files.image) {
             dataUpdate.Image = JSON.stringify({
-                url: `file/${req.files[1].filename}`
+                url: `/file/${req.files.image[0].filename}`,
+                fileName: req.files.image[0].filename
+
             })
             let path = "public/" + JSON.parse(document[0].Image).url;
             removeFile(path)
@@ -158,4 +153,19 @@ module.exports.delete_document = async (req, res) => {
         message: "Delete document is successfull",
         data: documentDelete
     })
+}
+module.exports.get_category = async (req, res) => {
+    try {
+        const list = await selectData('category_documents', {
+            filteringConditions: [
+            ]
+        })
+        res.status(200).json({
+            status_code: 200,
+            message: "Get list category is success",
+            data: list
+        })
+    } catch (err) {
+        res.status(404).send(err.message);
+    }
 }
