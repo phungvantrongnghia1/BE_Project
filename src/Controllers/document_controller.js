@@ -124,8 +124,8 @@ module.exports.update = async (req, res) => {
                 })
             }
             else {
-                return res.status(401).json({
-                    status_code: 401,
+                return res.status(200).json({
+                    status_code: 404,
                     message: "Document is not exits!"
                 })
             }
@@ -137,12 +137,16 @@ module.exports.delete_document = async (req, res) => {
             ['Id', '=', req.params.id]
         ]
     })
-    if (documentDelete.length === 0) return res.status(401).json({
+    if (documentDelete.length === 0) return res.status(200).json({
         status_code: 401,
         message: "ID is not exits!"
     })
-    let path = JSON.parse(documentDelete[0].File);
-    removeFile(path.url);
+    let pathFile = "public" + JSON.parse(documentDelete[0].File).url;
+    let pathImage = "public" + JSON.parse(documentDelete[0].Image).url;
+    console.log('pathFile', pathFile);
+    console.log('pathImage', pathImage);
+    removeFile(pathFile);
+    removeFile(pathImage);
     const deleteDoc = await deleteData("documents", {
         filteringConditions: [
             ['Id', '=', req.params.id]
