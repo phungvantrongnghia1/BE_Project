@@ -13,6 +13,27 @@ module.exports.getList = async (req, res) => {
         data: list
     })
 }
+
+module.exports.getDetail = async (req, res) => {
+    const list = await selectData('documents', {
+        filteringConditions: [
+            ['Id', '=', req.params.id]
+        ]
+    })
+    const user = await selectData('user', {
+        filteringConditions: [
+            ['Id', '=', list[0].UserId]
+        ]
+    })
+    delete user[0].Password;
+    return res.status(200).json({
+        status_code: 200,
+        message: "Get document detail is successfull",
+        data: { ...list[0], user:{...user[0]} }
+    })
+}
+
+
 module.exports.getListByID = async (req, res) => {
     const list = await selectData('documents', {
         filteringConditions: [
@@ -143,8 +164,6 @@ module.exports.delete_document = async (req, res) => {
     })
     let pathFile = "public" + JSON.parse(documentDelete[0].File).url;
     let pathImage = "public" + JSON.parse(documentDelete[0].Image).url;
-    console.log('pathFile', pathFile);
-    console.log('pathImage', pathImage);
     removeFile(pathFile);
     removeFile(pathImage);
     const deleteDoc = await deleteData("documents", {

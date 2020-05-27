@@ -72,14 +72,14 @@ const checkDocsExit = async (data, id) => {
   return document;
 };
 module.exports.share_document = async (req, res) => {
-  const document = await checkDocsExit(req.body.id, req.body.id_user);
+  const document = await checkDocsExit(req.body.id, req.user.id);
   if (document.length === 0)
     return res.status(401).json({
       status_code: 401,
       message: "Document is not exits!",
     });
   const Knex = knex();
-  let userShare = await Knex.select("Id", "FullName")
+  let userShare = await Knex.select("FullName", "Email", "DayOfBirth", "PhoneNumber")
     .from("user") // Get user from email
     .whereIn("Email", [...req.body.user_Share]);
   let idUser = userShare.map((item) => item.Id); // Get Id user
@@ -142,14 +142,14 @@ module.exports.share_document = async (req, res) => {
       ses
         .run(
           `MATCH (a:document_share {Id: ${
-            document[0].Id
+          document[0].Id
           }}), (b:user) WHERE b.Id IN [${[
             ...userNode,
           ]}] MERGE (a)-[r:share {Id_share:${
-            req.body.id_user
+          req.user.id
           }}]->(b) return a,b`
         )
-        .then((result) => {});
+        .then((result) => { });
     }, 2000);
   } else {
     let userNode = [...userNotExits.map((item) => item.Id), ...temp];
@@ -157,17 +157,23 @@ module.exports.share_document = async (req, res) => {
       session
         .run(
           `MATCH (a:document_share {Id: ${
-            document[0].Id
+          document[0].Id
           }}), (b:user) WHERE b.Id IN [${[
             ...userNode,
           ]}] MERGE (a)-[r:share {Id_share:${
-            req.body.id_user
+          req.user.id
           }}]->(b) return a,b`
         )
-        .then((result) => {});
+        .then((result) => { });
     }, 2000);
   }
-  res.send("Share document");
+  res.status(200).json(
+    {
+      status_code: 200,
+      message: "Chia sẽ tài liệu thành công",
+      data: userShare
+    }
+  );
 };
 
 /* Update document share 

@@ -11,18 +11,17 @@ const app = express();
 
 const driverNeo4j = require('../public/database/neo4j');
 let session = driverNeo4j.session();
+app.use(cors())
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(express.static('public'));
-app.use(cors())
-
 
 
 app.use(express.static('public'));
 app.use('/user', authRoute)
-app.use('/document-category',documentRouteCategory);
-app.use('/document',documentRoute);
-app.use('/document-share',documentShateRoute);
+app.use('/document-category', documentRouteCategory);
+app.use('/document', documentRoute);
+app.use('/document-share', documentShateRoute);
 app.get('/', (req, res) => {
     // session
     //     .run('MATCH(n) RETURN n LIMIT 25')
