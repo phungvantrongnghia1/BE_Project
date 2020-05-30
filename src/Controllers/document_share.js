@@ -79,7 +79,7 @@ module.exports.share_document = async (req, res) => {
       message: "Document is not exits!",
     });
   const Knex = knex();
-  let userShare = await Knex.select("FullName", "Email", "DayOfBirth", "PhoneNumber")
+  let userShare = await Knex.select("Id","FullName", "Email", "DayOfBirth", "PhoneNumber")
     .from("user") // Get user from email
     .whereIn("Email", [...req.body.user_Share]);
   let idUser = userShare.map((item) => item.Id); // Get Id user
@@ -206,7 +206,7 @@ const getUserInNeo4jByArrId = async (data) => {
   ));
 };
 module.exports.update = async (req, res) => {
-  const document = await checkDocsExit(req.body.id, req.body.id_user);
+  const document = await checkDocsExit(req.body.id, req.user.id);
   if (document.length === 0)
     return res.status(401).json({
       status_code: 401,
@@ -287,7 +287,7 @@ RETURN a`);
       "document_share",
       newUser,
       req.body.id,
-      req.body.id_user // change width ID user login
+      req.user.id // change width ID user login
     );
     return res.status(200).json({
       status_code: 200,
@@ -301,7 +301,7 @@ module.exports.re_share = async (req, res) => {
   const Knex = knex();
   let docs = await get_docs_share_id(
     "user",
-    req.body.id_user,
+    req.user.id,
     "share",
     "document_share",
     req.body.id
@@ -321,7 +321,7 @@ module.exports.re_share = async (req, res) => {
     req.body.id,
     "share",
     "user",
-    req.body.id_user
+    req.user.id
   );
   let UserExitOnnode = docShare.records.map(
     (record) => record._fields[1].properties.Id.low
@@ -342,7 +342,7 @@ module.exports.re_share = async (req, res) => {
       "document_share",
       idUserShare,
       req.body.id,
-      req.body.id_user // change width ID user login
+      req.user.id // change width ID user login
     );
   } else {
     let rs = await createArrRelateToNode(
@@ -350,7 +350,7 @@ module.exports.re_share = async (req, res) => {
       "document_share",
       userNotExits,
       req.body.id,
-      req.body.id_user // change width ID user login
+      req.user.id // change width ID user login
     );
   }
   return res.status(200).json({

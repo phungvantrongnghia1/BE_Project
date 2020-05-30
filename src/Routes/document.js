@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { verifyToken } = require('../utils/verifyToken');
 const { create, update, delete_document, getList, get_category,getDetail } = require("../Controllers/document_controller");
 const { uploadMulti } = require("../utils/file");
-router.get('/list/:id', verifyToken, getList);
+router.get('/list', verifyToken, getList);
 router.get('/detail/:id',getDetail);
 router.post('/create', verifyToken, uploadMulti, create);
 router.put('/update', verifyToken, uploadMulti, update);
