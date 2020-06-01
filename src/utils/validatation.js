@@ -2,10 +2,7 @@ const Joi = require('@hapi/joi').extend(require('@hapi/joi-date'));
 const registerValidation = (data) => {
     const schema = Joi.object({
         FullName: Joi.string().min(6).required(),
-        DayOfBirth: Joi.date().format('YYYY/MM/DD'),
         Email: Joi.string().email().max(256).required(),
-        PhoneNumber: Joi.string().regex(/(09|01[2|6|8|9])+([0-9]{8})\b/),
-        Description: Joi.string().required(),
         Password: Joi.string().min(6).required()
     })
 

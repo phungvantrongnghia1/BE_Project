@@ -37,14 +37,17 @@ module.exports.register = async (req, res) => {
     if (error) return res.status(400).send(error.details[0].message)
     mySQL.query(`SELECT * FROM user WHERE Email = "${req.body.Email}"`, async function (err, result, fields) {
         if (err) throw err;
-        if (Object.entries(result).length !== 0) return res.status(401).send("Email was exits!")
+        if (Object.entries(result).length !== 0) return res.status(200).json({
+            status_code: 204,
+            message: "Email was Exits!"
+        })
         const salt = await brcypt.genSalt(10);
         const hashPassword = await brcypt.hash(req.body.Password, salt);
-        mySQL.query(`INSERT INTO user (FullName, DayOfBirth,Email,PhoneNumber,Description,Password) VALUES ('${req.body.FullName}','${req.body.DayOfBirth}','${req.body.Email}','${req.body.PhoneNumber}','${req.body.Description}','${hashPassword}')`, function (err, result) {
+        mySQL.query(`INSERT INTO user (FullName,Email,Password) VALUES ('${req.body.FullName}','${req.body.Email}','${hashPassword}')`, function (err, result) {
             if (err) throw err;
             res.status(200).json({
-                status: 200,
-                message: "Register is successfull",
+                status_code: 200,
+                message: "Signup is successfull",
                 data: req.body
             })
         });
