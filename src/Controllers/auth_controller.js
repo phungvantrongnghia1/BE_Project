@@ -2,7 +2,8 @@ const { registerValidation, loginValidation } = require('../utils/validatation')
 const brcypt = require('bcryptjs');
 const jwt = require('jsonwebtoken')
 const dotenv = require('dotenv');
-const { mySQL, knex } = require("../../public/database/mysql_db");
+const { mySQL, selectData, knex, updateData } = require("../../public/database/mysql_db");
+
 dotenv.config();
 module.exports.login = async (req, res) => {
     const Knex = knex();
@@ -20,7 +21,7 @@ module.exports.login = async (req, res) => {
                 message: "Email or Password is not correct!"
             })
             const token = jwt.sign({ id: rows[0].Id }, process.env.TOKEN_SECRET) // lấy id của user vừa login tạo token
-            let result = {...rows[0]}
+            let result = { ...rows[0] }
             result.token = token;
             delete result.Password
             // res.header('auth-token', token).send(token);
@@ -53,4 +54,79 @@ module.exports.register = async (req, res) => {
         });
 
     });
+}
+module.exports.updateProfile = async (req, res) => {
+    // Input ID user , Phone,DateofBirth, FullNmae
+    // Tim usser
+    const Knex = knex();
+    Knex.from('user').select("*").where('Id', '=', req.body.Id)
+        .then(async (rows) => {
+            if (rows.length === 0) return res.status(200).json({
+                status: 401,
+                message: "Account isn't exits!"
+            })
+            updateData('user', {
+                fields: req.body,
+                filteringConditions: [
+                    ['Id', '=', req.body.Id]
+                ]
+            })
+                .then(updateData => {
+                    if (updateData) {
+                        selectData('user', {
+                            filteringConditions: [
+                                ['Id', '=', req.body.Id]
+                            ]
+                        }).then(data => {
+                            return res.status(200).json({
+                                status_code: 200,
+                                message: "Update user is success",
+                                data: data
+                            })
+                        })
+                    }
+                    else {
+                        return res.status(200).json({
+                            status_code: 404,
+                            message: "Document is not exits!"
+                        })
+                    }
+                })
+        })
+        .catch((err) => { console.log(err); throw err })
+}
+module.exports.changePassword = async (req, res) => {
+    const Knex = knex();
+    const salt = await brcypt.genSalt(10);
+    const hashPassword = await brcypt.hash(req.body.password, salt);
+    const user = {
+        Password: hashPassword
+    }
+    updateData('user', {
+        fields: user,
+        filteringConditions: [
+            ['Id', '=', req.user.id]
+        ]
+    })
+        .then(updateData => {
+            if (updateData) {
+                selectData('user', {
+                    filteringConditions: [
+                        ['Id', '=', req.user.id]
+                    ]
+                }).then(data => {
+                    return res.status(200).json({
+                        status_code: 200,
+                        message: "Update user is success",
+                        data: data
+                    })
+                })
+            }
+            else {
+                return res.status(200).json({
+                    status_code: 404,
+                    message: "Document is not exits!"
+                })
+            }
+        })
 }
