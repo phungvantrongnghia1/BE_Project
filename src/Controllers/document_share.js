@@ -58,10 +58,23 @@ module.exports.get_docs_share = async (req, res) => {
       });
     });
 };
-/*
- *  Share_document được dùng cho người dùng share tài liệu của người dùng tải lên
- * Input : Id document share, array user được share
- */
+module.exports.get_docs_public = async (req, res) => {
+  let idDocs = [];
+  session
+    .run(`MATCH (a:document_share)  return a LIMIT 12`)
+    .then(async result => {
+      result.records.forEach((e) => {
+        console.log('e', e._fields[0])
+        idDocs.push(e._fields[0].properties.Id.low)
+      })
+      console.log('idDocs', idDocs)
+      const Knex = knex();
+      let docs = await Knex.select("*")
+        .from("documents") // Get user from email
+        .whereIn("Id", [...idDocs]);
+    })
+  console.log('docs', docs);
+}
 const checkDocsExit = async (data, id) => {
   const document = await selectData("documents", {
     filteringConditions: [
@@ -79,7 +92,7 @@ module.exports.share_document = async (req, res) => {
       message: "Document is not exits!",
     });
   const Knex = knex();
-  let userShare = await Knex.select("Id","FullName", "Email", "DayOfBirth", "PhoneNumber")
+  let userShare = await Knex.select("Id", "FullName", "Email", "DayOfBirth", "PhoneNumber")
     .from("user") // Get user from email
     .whereIn("Email", [...req.body.user_Share]);
   let idUser = userShare.map((item) => item.Id); // Get Id user

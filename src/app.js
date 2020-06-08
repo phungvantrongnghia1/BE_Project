@@ -7,6 +7,7 @@ const authRoute = require("./Routes/auth");
 const documentRouteCategory = require('./Routes/document_category');
 const documentRoute = require('./Routes/document');
 const documentShateRoute = require("./Routes/document_share");
+const upload = require('./Routes/upload.router');
 const app = express();
 
 const driverNeo4j = require('../public/database/neo4j');
@@ -22,6 +23,7 @@ app.use('/user', authRoute)
 app.use('/document-category', documentRouteCategory);
 app.use('/document', documentRoute);
 app.use('/document-share', documentShateRoute);
+app.use('/upload',upload);
 app.get('/', (req, res) => {
     // session
     //     .run('MATCH(n) RETURN n LIMIT 25')

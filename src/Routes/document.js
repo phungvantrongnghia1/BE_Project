@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const { verifyToken } = require('../utils/verifyToken');
+let upload = require('../../public/database/multer.config.js');
 const { create, update, delete_document, getList, get_category,getDetail } = require("../Controllers/document_controller");
 const { uploadMulti } = require("../utils/file");
 router.get('/list', verifyToken, getList);
