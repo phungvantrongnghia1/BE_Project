@@ -11,11 +11,16 @@ const uploadParams = {
   Bucket: env.Bucket,
   Key: '', // pass key
   Body: null, // pass file body
+  ContentType:''
   // ACL: 'public-read'
+};
+const deleteParams = {
+  Bucket: env.Bucket,
+  Key: '' // pass key
 };
 
 const s3 = {};
 s3.s3Client = s3Client;
 s3.uploadParams = uploadParams;
-
+s3.deleteParams = deleteParams;
 module.exports = s3;

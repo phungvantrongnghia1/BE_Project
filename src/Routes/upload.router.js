@@ -1,9 +1,9 @@
 let express = require('express');
 let router = express.Router();
-let {upload} = require('../../public/database/multer.config.js');
+let {uploadMultiConfig} = require('../../public/database/multer.config.js');
  
 const awsWorker = require('../Controllers/test');
  
-router.post('/file', upload, awsWorker.doUpload);
- 
+router.post('/file', uploadMultiConfig, awsWorker.doUpload);
+router.get('/get-file',awsWorker.getfile)
 module.exports = router;
