@@ -2,16 +2,42 @@ const { selectData, deleteData, updateData, insertData } = require("../../public
 const { removeFile, upload } = require("../utils/file");
 const s3 = require('../../public/database/s3.config');
 
+const getURLPublic = async (key) => {
+    const s3Client = s3.s3Client;
+    const params = s3.deleteParams;
+    params.Key = key;
+    let result = await new Promise(function (resolve, reject) {
+        s3Client.getSignedUrl('getObject', params, (err, data) => {
+            if (err) {
+                reject(err);
+            }
+            resolve(data);
+        })
+    })
+    return result;
+}
+const formatData = async (list) => {
+    let arrList = await list.map(async item => {
+        let urlFile = await getURLPublic(JSON.parse(item.File).url);
+        let urlImage = await getURLPublic(JSON.parse(item.Image).url);
+        let temp = { ...item };
+        temp.File = JSON.stringify({ url: urlFile, fileName: JSON.parse(item.File).fileName })
+        temp.Image = JSON.stringify({ url: urlImage, fileName: JSON.parse(item.Image).fileName })
+        return temp;
+    })
+    return await Promise.all(arrList);
+}
 module.exports.getList = async (req, res) => {
     const list = await selectData('documents', {
         filteringConditions: [
             ['UserId', '=', req.user.id]
         ]
     })
+    let result = await formatData(list);
     return res.status(200).json({
         status_code: 200,
         message: "Get list document is successfull",
-        data: list
+        data: result
     })
 }
 
@@ -26,11 +52,12 @@ module.exports.getDetail = async (req, res) => {
             ['Id', '=', list[0].UserId]
         ]
     })
+    const result = await formatData(list);
     delete user[0].Password;
     return res.status(200).json({
         status_code: 200,
         message: "Get document detail is successfull",
-        data: { ...list[0], user: { ...user[0] } }
+        data: { ...result[0], user: { ...user[0] } }
     })
 }
 
@@ -73,10 +100,8 @@ const deletefile = async (keyFile) => {
     params.Key = keyFile
     try {
         await s3Client.headObject(params).promise()
-        console.log("File Found in S3")
         try {
             await s3Client.deleteObject(params).promise()
-            console.log("file deleted Successfully")
         }
         catch (err) {
             console.log("ERROR in file Deleting : " + JSON.stringify(err))
@@ -108,13 +133,22 @@ module.exports.create = async (req, res) => {
         fileName: imageResult.key
     })
     documentNew.UserId = req.user.id;
+    documentNew.Views = 0;
+    documentNew.Dowloads = 0;
+    documentNew.Shares = 0;
     const newDocument = await insertData('documents', [
         { ...documentNew }
     ])
+    let docsNewMySQL = await selectData('documents', {
+        filteringConditions: [
+            ['Id', '=', newDocument[0]]
+        ]
+    })
+    let result = await formatData(docsNewMySQL);
     return res.status(200).json({
         status_code: 200,
         message: "Create document is success",
-        data: documentNew
+        data: result
     })
 }
 module.exports.update = async (req, res) => {
@@ -124,7 +158,7 @@ module.exports.update = async (req, res) => {
     const document = await selectData('documents', {
         filteringConditions: [
             ['Id', '=', req.body.Id],
-            ['UserId', '=', 4]
+            ['UserId', '=', req.user.id]
         ]
     })
     if (document.length === 0) return res.status(401).json({
@@ -146,23 +180,20 @@ module.exports.update = async (req, res) => {
     if (Object.entries(req.files).length !== 0) {
         if (req.files.file) {
             let path = JSON.parse(document[0].File).url;
-            deletefile(path)
+            await deletefile(path)
             let fileResult = await uploadfile(req.files.file[0], 'application/pdf');
             dataUpdate.File = JSON.stringify({
                 url: fileResult.key,
                 fileName: fileResult.key
             })
-
-
         }
         if (req.files.image) {
             let path = JSON.parse(document[0].Image).url;
-            deletefile(path)
+            await deletefile(path)
             let imageResult = await uploadfile(req.files.image[0], 'image/png');
             dataUpdate.Image = JSON.stringify({
                 url: imageResult.key,
                 fileName: imageResult.key
-
             })
 
         }
@@ -179,11 +210,14 @@ module.exports.update = async (req, res) => {
                     filteringConditions: [
                         ['Id', '=', req.body.Id]
                     ]
-                }).then(data => {
+                }).then(async data => {
+                    let param = JSON.parse(data[0].Image).url;
+                    let url = await getURLPublic(param);
+                    data[0].Image = JSON.stringify({ url: url, pathName: param });
                     return res.status(200).json({
                         status_code: 200,
-                        message: "Update document is success",
-                        data: data
+                        message: "Document update success",
+                        data
                     })
                 })
             }
@@ -203,12 +237,13 @@ module.exports.delete_document = async (req, res) => {
     })
     if (documentDelete.length === 0) return res.status(200).json({
         status_code: 401,
-        message: "ID is not exits!"
+        message: "ID is not exits!",
+
     })
-    let pathFile = "public" + JSON.parse(documentDelete[0].File).url;
-    let pathImage = "public" + JSON.parse(documentDelete[0].Image).url;
-    removeFile(pathFile);
-    removeFile(pathImage);
+    let pathFile = JSON.parse(documentDelete[0].File).url;
+    let pathImage = JSON.parse(documentDelete[0].Image).url;
+    await deletefile(pathFile)
+    await deletefile(pathImage)
     const deleteDoc = await deleteData("documents", {
         filteringConditions: [
             ['Id', '=', req.params.id]

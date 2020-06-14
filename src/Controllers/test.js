@@ -69,8 +69,11 @@ const deletefile = async () => {
     }
 }
 module.exports.getfile = async (req, res) => {
-   deletefile();
- 
+    const s3Client = s3.s3Client;
+    const params = s3.deleteParams;
+    params.Key = "1592116996544-5308970221591711444847-599312291Home Test - Software Developer (Frontend).pdf";
+        var url =await s3Client.getSignedUrl('getObject', params);
+    console.log('url', url)    
 }
 
 /*

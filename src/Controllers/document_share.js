@@ -1,4 +1,5 @@
 const { selectData, knex } = require("../../public/database/mysql_db");
+const s3 = require('../../public/database/s3.config');
 const {
   get_docs_share,
   getNode,
@@ -15,6 +16,33 @@ const {
 } = require("../Modules/document_share");
 const driverNeo4j = require("../../public/database/neo4j");
 let session = driverNeo4j.session();
+const getURLPublic = async (key) => {
+  const s3Client = s3.s3Client;
+  const params = s3.deleteParams;
+  params.Key = key;
+  let result = await new Promise(function (resolve, reject) {
+    s3Client.getSignedUrl('getObject', params, (err, data) => {
+      if (err) {
+        reject(err);
+      }
+      resolve(data);
+    })
+  })
+  return result;
+}
+const formatData = async (list) => {
+  let arrList = await list.map(async item => {
+    let urlFile = await getURLPublic(JSON.parse(item.File).url);
+    let urlImage = await getURLPublic(JSON.parse(item.Image).url);
+    let temp = { ...item };
+    temp.File = JSON.stringify({ url: urlFile, fileName: JSON.parse(item.File).fileName })
+    temp.Image = JSON.stringify({ url: urlImage, fileName: JSON.parse(item.Image).fileName })
+    return temp;
+  })
+  return await Promise.all(arrList);
+}
+
+/************************************************************ */
 module.exports.get_docs_share = async (req, res) => {
   let docs_share = [];
   const user = await selectData("user", {
@@ -51,10 +79,11 @@ module.exports.get_docs_share = async (req, res) => {
       let result = docsShareMySql.map((item, index) => {
         return { ...item, user_share: { ...usersShare[index] } };
       });
+
       res.status(200).json({
         status_code: 200,
         message: "Get document share success",
-        data: result,
+        data: await formatData(result),
       });
     });
 };
@@ -64,16 +93,19 @@ module.exports.get_docs_public = async (req, res) => {
     .run(`MATCH (a:document_share)  return a LIMIT 12`)
     .then(async result => {
       result.records.forEach((e) => {
-        console.log('e', e._fields[0])
         idDocs.push(e._fields[0].properties.Id.low)
       })
-      console.log('idDocs', idDocs)
       const Knex = knex();
       let docs = await Knex.select("*")
         .from("documents") // Get user from email
         .whereIn("Id", [...idDocs]);
+      let dataResult = await formatData(docs);
+      return res.status(200).json({
+        status_code: 200,
+        message: "Get public docs is not exits!",
+        data: dataResult
+      });
     })
-  console.log('docs', docs);
 }
 const checkDocsExit = async (data, id) => {
   const document = await selectData("documents", {
@@ -188,20 +220,6 @@ module.exports.share_document = async (req, res) => {
     }
   );
 };
-
-/* Update document share 
-* todo: Cập nhật document share 
-    * Tác vụ:
-    *   - 1: Cập nhật document (Không cho)
-    *   - 2: Cập nhật nhóm người được share 
-    *   - 3: Cập nhật role (Đợi update sau)
-*   * Input:  Id document, Array user_share     
-*   Check user 
-     - Tìm các user không còn được chia sẽ nữa xóa relatetionship của nó
-     - Tìm các user chưa tồn tại tạo ra các user đó
-     - Tạo relate từ node docs đến user được share
-     *
- */
 const filterUserShareByEmail = async (data) => {
   const Knex = knex();
   let userShare = await Knex.select("Id", "FullName")
